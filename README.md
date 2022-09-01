@@ -16,6 +16,8 @@ The lldp.sh embeds a python script to use raw socket to get LLDP packets.
 
 ### Usage
 
+Download the [lldp.sh](lldp.sh)
+
 ```
 sudo bash lldp.sh
 ```
