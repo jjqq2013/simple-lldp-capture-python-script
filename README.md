@@ -20,6 +20,9 @@ The lldp.sh embeds a python script to use raw socket to get LLDP packets.
 sudo bash lldp.sh
 ```
 
+it will collect all active NICs then spawn a python script to collect LLDP via the nic,
+the lldp.sh wait max 60 seconds then print the result. (If all NICs got LLDP packets soon, then the lldp.sh ends soon).
+
 ```
 <?xml version="1.0" encoding="UTF-8"?>
 <lldp label="LLDP neighbors">
