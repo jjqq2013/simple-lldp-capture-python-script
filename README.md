@@ -45,5 +45,5 @@ the lldp.sh wait max 60 seconds then print the result. (If all NICs got LLDP pac
 
 You can use tcpdump to get LLDP:
 ```
-sudo tcpdump -i any ether proto 0x88cc
+sudo tcpdump -n multicast | grep LLDP
 ```
