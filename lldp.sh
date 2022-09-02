@@ -25,12 +25,7 @@ set -e -o pipefail # exit on error
 # I could use advanced bash features to completely make this script not using any file, but
 # since this script may be called in some lower version of bash, I did not do not do that.
 
-function cleanup() {
-  while read nic_name; do
-    ip link set dev $nic_name allmulticast off || true
-  done < /tmp/lldp-$$-CONNECTED_PHYSICAL_NICS
-  rm -fR /tmp/lldp-$$-*
-}
+function cleanup() { rm -fR /tmp/lldp-$$-*; }
 trap cleanup INT
 
 find /sys/class/net -mindepth 1 -maxdepth 1 -type l -not -lname '*/virtual/*' -printf '%f\n' > /tmp/lldp-$$-PHYSICAL_NICS
@@ -38,10 +33,8 @@ ip -oneline link show up | grep ,LOWER_UP | awk '{print $2}' | tr -d ':' > /tmp/
 fgrep --line-regexp -f /tmp/lldp-$$-PHYSICAL_NICS /tmp/lldp-$$-CONNECTED_NICS > /tmp/lldp-$$-CONNECTED_PHYSICAL_NICS
 
 while read nic_name; do
-  # On some OSes, need enable allmulticast otherwise can not receive LLDP packets.
-  # Enabling promisc also works, but the nic may originally is already in promisc mode, I can not simply restore it safely at the end.
-  ip link set dev $nic_name allmulticast on || true
-
+  # add a multicast mac address(LLDP destination mac) to the nic, otherwise kernel may not forward LLDP multicast message to it
+  ip maddress add 01:80:c2:00:00:0e dev $nic_name
   mac=$(ip -oneline link show $nic_name | grep -Po '(?<= link/ether )([0-9a-f]{2}:){5}[0-9a-f]{2}')
 
   # run a background job to capture lldp (within 60s), save to $nic_name.xml
