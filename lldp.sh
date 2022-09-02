@@ -33,6 +33,7 @@ ip -oneline link show up | grep ,LOWER_UP | awk '{print $2}' | tr -d ':' > /tmp/
 fgrep --line-regexp -f /tmp/lldp-$$-PHYSICAL_NICS /tmp/lldp-$$-CONNECTED_NICS > /tmp/lldp-$$-CONNECTED_PHYSICAL_NICS
 
 while read nic_name; do
+  ip link set dev $nic_name allmulticast on
   mac=$(ip -oneline link show $nic_name | grep -Po '(?<= link/ether )([0-9a-f]{2}:){5}[0-9a-f]{2}')
 
   # run a background job to capture lldp (within 60s), save to $nic_name.xml
