@@ -28,12 +28,12 @@ the lldp.sh wait max 60 seconds then print the result. (If all NICs got LLDP pac
 ```
 <?xml version="1.0" encoding="UTF-8"?>
 <lldp label="LLDP neighbors">
-  <interface label="Interface" name="eth0">
+  <interface label="Interface" name="54:ab:3a:29:55:16">
     <id label="ChassisID" type="mac">54:ab:3a:32:00:cc</id>
     <id label="PortID">0/17</id>
     <name label="SysName">x1-xg16-15-3usw</name>
   </interface>
-  <interface label="Interface" name="eth1">
+  <interface label="Interface" name="54:ab:3a:29:55:17">
     <id label="ChassisID" type="mac">54:ab:3a:32:00:cc</id>
     <id label="PortID">0/18</id>
     <name label="SysName">x1-xg16-15-3usw</name>
