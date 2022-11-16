@@ -9,12 +9,12 @@ set -e -o pipefail # exit on error
 #
 # <?xml version="1.0" encoding="UTF-8"?>
 # <lldp label="LLDP neighbors">
-#   <interface label="Interface" name="enp130s0f0">
+#   <interface label="Interface" name="54:ab:3a:29:55:16">
 #     <id label="ChassisID" type="mac">08:9e:01:b3:6b:fc</id>
 #     <id label="PortID">0/41</id>
 #     <name label="SysName">j1-ag16-2</name>
 #   </interface>
-#   <interface label="Interface" name="enp130s0f1">
+#   <interface label="Interface" name="54:ab:3a:29:55:17">
 #     <id label="ChassisID" type="mac">08:9e:01:b3:6b:fc</id>
 #     <id label="PortID">0/35</id>
 #     <name label="SysName">j1-ag16-2</name>
@@ -34,12 +34,14 @@ fgrep --line-regexp -f /tmp/lldp-$$-PHYSICAL_NICS /tmp/lldp-$$-CONNECTED_NICS > 
 
 while read nic_name; do
   # add a multicast mac address(LLDP destination mac) to the nic, otherwise kernel may not forward LLDP multicast message to it
-  ip maddress add 01:80:c2:00:00:0e dev $nic_name
+  ip maddress add 01:80:c2:00:00:0e dev $nic_name || ip link set dev $nic_name allmulticast on
   mac=$(ip -oneline link show $nic_name | grep -Po '(?<= link/ether )([0-9a-f]{2}:){5}[0-9a-f]{2}')
+  # after bonding, the mac may be changed, so here get original mac
+  orig_mac=$(cat /sys/class/net/$nic_name/bonding_slave/perm_hwaddr 2>/dev/null || echo $mac)
 
   # run a background job to capture lldp (within 60s), save to $nic_name.xml
   rm -f /tmp/lldp-$$-$nic_name.xml
-  sed 's/^    //g' <<'__EOF_OF_PYTHON_SCRIPT' | timeout 60 "$(type -p "${PYTHON:-python3}" || echo python)" - $nic_name $mac > /tmp/lldp-$$-$nic_name.xml &
+  sed 's/^    //g' <<'__EOF_OF_PYTHON_SCRIPT' | timeout 60 "$(type -p "${PYTHON:-python3}" || echo python)" - $nic_name $mac $orig_mac > /tmp/lldp-$$-$nic_name.xml &
     import socket, sys, re
     def memview_to_mac(data):
       return ':'.join('{:02x}'.format(x) for x in data.tolist())
@@ -48,10 +50,11 @@ while read nic_name; do
         return char_or_int
       return ord(char_or_int)
     def memview_to_str(data):
-      return data.tobytes().decode('utf-8', errors='ignore')
+      return data.tobytes().decode('utf-8', errors='ignore').rstrip('\0')
     ETH_P_ALL = 3
     my_nic = sys.argv[1]
     my_mac = sys.argv[2]
+    my_orig_mac = sys.argv[3]
     sock = socket.socket(socket.AF_PACKET, socket.SOCK_RAW, socket.htons(ETH_P_ALL))
     sock.bind((my_nic, 0))
     while True:
@@ -88,7 +91,7 @@ while read nic_name; do
           sys_name = memview_to_str(tlv_data)
         data = data[2+tlv_len:]
       if chassis_mac and port_id and sys_name and chassis_mac != my_mac:
-        print('  <interface label="Interface" name="' + my_nic + '">')
+        print('  <interface label="Interface" name="' + my_orig_mac + '">')
         print('    <id label="ChassisID" type="mac">' + chassis_mac + '</id>')
         print('    <id label="PortID">' + port_id + '</id>')
         print('    <name label="SysName">' + sys_name + '</name>')
